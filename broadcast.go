@@ -87,9 +87,12 @@ func (bc *broadcast) Send(room, event string, args ...interface{}) {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	for _, connection := range bc.rooms[room] {
-		connection.Emit(event, args...)
-	}
+	connections := bc.rooms[room]
+	go func() {
+		for _, connection := range connections {
+			go connection.Emit(event, args...)
+		}
+	}()
 }
 
 // SendAll sends given event & args to all the connections to all the rooms
@@ -97,11 +100,15 @@ func (bc *broadcast) SendAll(event string, args ...interface{}) {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	for _, connections := range bc.rooms {
-		for _, connection := range connections {
-			connection.Emit(event, args...)
+	rooms := bc.rooms
+	go func() {
+		for _, connections := range rooms {
+			for _, connection := range connections {
+				go connection.Emit(event, args...)
+			}
 		}
-	}
+	}()
+
 }
 
 // ForEach sends data returned by DataFunc, if room does not exits sends nothing
