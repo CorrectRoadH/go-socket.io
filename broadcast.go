@@ -92,7 +92,7 @@ func (bc *broadcast) Send(room, event string, args ...interface{}) {
 	connections := bc.rooms[room]
 	bc.lock.RUnlock()
 
-	p := pool.New().WithMaxGoroutines(10)
+	p := pool.New().WithMaxGoroutines(100)
 	for _, connection := range connections {
 		connection := connection
 		p.Go(func() {
@@ -108,7 +108,7 @@ func (bc *broadcast) SendAll(event string, args ...interface{}) {
 	rooms := bc.rooms
 	bc.lock.RUnlock()
 
-	p := pool.New().WithMaxGoroutines(10)
+	p := pool.New().WithMaxGoroutines(100)
 	for _, connections := range rooms {
 		for _, connection := range connections {
 			p.Go(func() {
