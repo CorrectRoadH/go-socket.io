@@ -1,12 +1,14 @@
 package socketio
 
 import (
+	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/CorrectRoadH/go-socket.io/engineio"
 	"github.com/CorrectRoadH/go-socket.io/parser"
@@ -127,6 +129,9 @@ func (c *conn) write(header parser.Header, args ...reflect.Value) {
 	select {
 	case c.writeChan <- pkg:
 	case <-c.quitChan:
+		return
+	case <-time.After(5 * time.Second):
+		c.onError(header.Namespace, errors.New("write timeout"))
 		return
 	}
 }

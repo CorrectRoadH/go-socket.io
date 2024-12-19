@@ -1,6 +1,10 @@
 package socketio
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/sourcegraph/conc/pool"
+)
 
 // EachFunc typed for each callback function
 type EachFunc func(Conn)
@@ -85,36 +89,40 @@ func (bc *broadcast) Clear(room string) {
 // Send sends given event & args to all the connections in the specified room
 func (bc *broadcast) Send(room, event string, args ...interface{}) {
 	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
 	connections := bc.rooms[room]
-	go func() {
-		for _, connection := range connections {
-			go connection.Emit(event, args...)
-		}
-	}()
+	bc.lock.RUnlock()
+
+	p := pool.New().WithMaxGoroutines(10)
+	for _, connection := range connections {
+		connection := connection
+		p.Go(func() {
+			connection.Emit(event, args...)
+		})
+	}
+	p.Wait()
 }
 
 // SendAll sends given event & args to all the connections to all the rooms
 func (bc *broadcast) SendAll(event string, args ...interface{}) {
 	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
 	rooms := bc.rooms
-	go func() {
-		for _, connections := range rooms {
-			for _, connection := range connections {
-				go connection.Emit(event, args...)
-			}
-		}
-	}()
+	bc.lock.RUnlock()
 
+	p := pool.New().WithMaxGoroutines(10)
+	for _, connections := range rooms {
+		for _, connection := range connections {
+			p.Go(func() {
+				connection.Emit(event, args...)
+			})
+		}
+	}
+	p.Wait()
 }
 
 // ForEach sends data returned by DataFunc, if room does not exits sends nothing
 func (bc *broadcast) ForEach(room string, f EachFunc) {
 	bc.lock.RLock()
-	defer bc.lock.RUnlock()
+	bc.lock.RUnlock()
 
 	occupants, ok := bc.rooms[room]
 	if !ok {
