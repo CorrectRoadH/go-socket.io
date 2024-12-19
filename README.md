@@ -1,6 +1,8 @@
-# WARNING
+# The fork of go-socket.io
+the repo is a fork of go-socket.io, it focus fix bugs and improve performance.
 
-**This repo is archived. Please check the forked one https://github.com/feederco/go-socket.io.**
+fix list:
+- fix can't join room when broadcast is busy
 
 # go-socket.io
 
